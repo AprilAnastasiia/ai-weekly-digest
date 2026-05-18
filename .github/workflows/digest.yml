@@ -2,8 +2,8 @@ name: AI Weekly Digest
 
 on:
   schedule:
-      - cron: '0 9 * * 1'   # Every Monday at 09:00 UTC
-        workflow_dispatch:        # Allow manual trigger from Actions tab
+      - cron: '0 9 * * 1'
+        workflow_dispatch:
 
         jobs:
           send-digest:
@@ -22,7 +22,7 @@ on:
 
                                                                                     - name: Run digest script
                                                                                             env:
-                                                                                                      GMAIL_APP_PASSWORD:   ${{ secrets.GMAIL_APP_PASSWORD }}
-                                                                                                                REDDIT_CLIENT_ID:     ${{ secrets.REDDIT_CLIENT_ID }}
+                                                                                                      GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+                                                                                                                REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
                                                                                                                           REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
                                                                                                                                   run: python digest.py
