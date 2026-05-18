@@ -1,7 +1,9 @@
 import os
 import smtplib
 import urllib.request
+import urllib.parse
 import json
+import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime
@@ -9,15 +11,37 @@ from datetime import datetime
 GMAIL_USER = "Staseyshoe@gmail.com"
 GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]
 TEAMS_EMAIL = "76ec74ef.crystalblockchain.com@emea.teams.ms"
+REDDIT_CLIENT_ID = os.environ["REDDIT_CLIENT_ID"]
+REDDIT_CLIENT_SECRET = os.environ["REDDIT_CLIENT_SECRET"]
 
 SUBREDDITS = ["ClaudeAI", "ChatGPT", "perplexity_ai", "AIAssistants", "artificial"]
 KEYWORDS = ["claude", "claude ai", "claude code", "perplexity", "chatgpt", "gpt-4", "gpt-5", "ai agent", "ai agents", "llm", "copilot"]
 TOP_POSTS_PER_SUB = 5
 
 
-def fetch_top_posts(subreddit, limit=10):
-    url = f"https://www.reddit.com/r/{subreddit}/top.json?t=week&limit={limit}"
-    req = urllib.request.Request(url, headers={"User-Agent": "ai-weekly-digest/1.0"})
+def get_reddit_token():
+    credentials = base64.b64encode(f"{REDDIT_CLIENT_ID}:{REDDIT_CLIENT_SECRET}".encode()).decode()
+    data = urllib.parse.urlencode({"grant_type": "client_credentials"}).encode()
+    req = urllib.request.Request(
+        "https://www.reddit.com/api/v1/access_token",
+        data=data,
+        headers={
+            "Authorization": f"Basic {credentials}",
+            "User-Agent": "ai-weekly-digest/1.0 by AprilAnastasiia",
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        result = json.loads(resp.read().decode())
+    return result["access_token"]
+
+
+def fetch_top_posts(subreddit, token, limit=15):
+    url = f"https://oauth.reddit.com/r/{subreddit}/top?t=week&limit={limit}"
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"bearer {token}",
+        "User-Agent": "ai-weekly-digest/1.0 by AprilAnastasiia",
+    })
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
@@ -90,10 +114,13 @@ def send_email(html):
 def main():
     print("=== AI Weekly Digest ===")
     print(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n")
+    print("Getting Reddit token...")
+    token = get_reddit_token()
+    print("  Token obtained!\n")
     all_posts = {}
     for sub in SUBREDDITS:
         print(f"Fetching r/{sub} ...")
-        posts = fetch_top_posts(sub, limit=15)
+        posts = fetch_top_posts(sub, token, limit=15)
         relevant = [p for p in posts if is_relevant(p)][:TOP_POSTS_PER_SUB]
         all_posts[sub] = relevant
         print(f"  {len(relevant)} relevant posts found")
